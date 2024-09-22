@@ -23,7 +23,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db), change_user_id:
 async def get_user(id: int = None, login: str = None, db: Session = Depends(get_db)):
     if id is None and login is None:
         raise HTTPException(status_code=400, detail="Either 'id' or 'login' must be provided")
-    
+    print(f"userlist {login}")
     try:
         if id:
             user = get_user_data(db, id)
