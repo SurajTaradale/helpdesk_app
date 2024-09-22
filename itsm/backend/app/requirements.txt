@@ -5,3 +5,6 @@ pydantic
 PyMySQL
 redis
 diskcache
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]

@@ -75,7 +75,7 @@ def user_add(db: Session, user: UserCreate, change_user_id: int):
         set_preferences(db, user_id, key, value)
     
     logger.info(f"User: '{user.login}' ID: '{new_user.id}' created successfully ({change_user_id})!")
-    cache.set(f"user:{user.login}", new_user, ttl=3600)  # Store user object in cache
+    cache.set(f"user:{user.login}", new_user, expire=3600)  # Store user object in cache
     return new_user.id
 
 def set_preferences(db: Session, user_id: int, key: str, value: str):
@@ -108,6 +108,7 @@ def get_user_data(db: Session, identifier):
     cached_user = cache.get(cache_key)
     if cached_user:
         return cached_user
+    print(f"cached_user {cached_user}")
 
     # Fetch user data from the database
     user_data = None
@@ -115,7 +116,7 @@ def get_user_data(db: Session, identifier):
         user_data = db.query(User).filter(User.id == identifier).first()
     elif isinstance(identifier, str):
         user_data = db.query(User).filter(User.login == identifier).first()
-
+    print(f"user_data {user_data}")
     if user_data:
         # Fetch user preferences
         preferences = {}
@@ -127,7 +128,8 @@ def get_user_data(db: Session, identifier):
             UserPreference.user_id == user_data.id,
             UserPreference.preferences_key == 'UserMobile'
         ).first()
-
+        print(f"user_email {user_email}")
+        print(f"user_mobile {user_mobile}")
         # Set preferences to return
         if user_email:
             preferences['email'] = user_email.preferences_value.decode('utf-8')
@@ -149,10 +151,17 @@ def get_user_data(db: Session, identifier):
             'email': preferences.get('email'),
             'mobile': preferences.get('mobile')
         }
-
+        print(f"response_data {response_data}")
         # Store in cache if found
-        cache.set(cache_key, response_data, ttl=3600)  # Cache for 1 hour
+        cache.set(cache_key, response_data, expire=3600)  # Cache for 1 hour
 
         return response_data
 
+    return None
+
+def get_user_hash_pwd(db: Session, login: str) -> str:
+    existing_user_password = db.query(User.pw).filter(User.login == login).first()
+    
+    if existing_user_password:
+        return existing_user_password[0]  # Return the first element of the tuple
     return None

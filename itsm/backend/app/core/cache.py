@@ -1,56 +1,46 @@
 from app.core.config import settings
 from app.core.logging import get_logger
+import json
+import redis
+import diskcache
 
-logger = get_logger(__name__)
-
-if settings.CACHE_TYPE == "redis":
-    import redis
-
-    class Cache:
-        def __init__(self):
+class Cache:
+    def __init__(self):
+        if settings.CACHE_TYPE == "redis":
             self.client = redis.Redis.from_url(settings.REDIS_URL)
-
-        def set(self, key: str, value: str, expire: int = 300):
-            try:
-                self.client.setex(key, expire, value)
-            except Exception as e:
-                logger.error(f"Redis set error: {e}")
-
-        def get(self, key: str):
-            try:
-                return self.client.get(key)
-            except Exception as e:
-                logger.error(f"Redis get error: {e}")
-                return None
-
-        def delete(self, key: str):
-            try:
-                self.client.delete(key)
-            except Exception as e:
-                logger.error(f"Redis delete error: {e}")
-
-elif settings.CACHE_TYPE == "diskcache":
-    import diskcache
-
-    class Cache:
-        def __init__(self):
+        elif settings.CACHE_TYPE == "diskcache":
             self.cache = diskcache.Cache(settings.DISKCACHE_DIR)
 
-        def set(self, key: str, value: str, expire: int = 300):
-            try:
+    def set(self, key: str, value, expire: int = 300):
+        try:
+            if settings.CACHE_TYPE == "redis":
+                # Serialize the value to JSON
+                self.client.setex(key, expire, json.dumps(value))
+            elif settings.CACHE_TYPE == "diskcache":
                 self.cache.set(key, value, expire=expire)
-            except Exception as e:
-                logger.error(f"FileCache set error: {e}")
+        except Exception as e:
+            logger.error(f"Cache set error: {e}")
 
-        def get(self, key: str):
-            try:
-                return self.cache.get(key)
-            except Exception as e:
-                logger.error(f"FileCache get error: {e}")
+    def get(self, key: str):
+        try:
+            if settings.CACHE_TYPE == "redis":
+                # Retrieve and deserialize the JSON value
+                value = self.client.get(key)
+                if value:
+                    return json.loads(value)
                 return None
+            elif settings.CACHE_TYPE == "diskcache":
+                return self.cache.get(key)
+        except Exception as e:
+            logger.error(f"Cache get error: {e}")
+            return None
 
-        def delete(self, key: str):
-            try:
+    def delete(self, key: str):
+        try:
+            if settings.CACHE_TYPE == "redis":
+                self.client.delete(key)
+            elif settings.CACHE_TYPE == "diskcache":
                 self.cache.delete(key)
-            except Exception as e:
-                logger.error(f"FileCache delete error: {e}")
+        except Exception as e:
+            logger.error(f"Cache delete error: {e}")
+
