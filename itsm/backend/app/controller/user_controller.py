@@ -44,7 +44,6 @@ def user_add(db: Session, user: UserCreate, change_user_id: int):
     # Generate password if not provided
     if not user.password:
         user.password = generate_random_password()
-    print("started before create user")
     # Create new user
     new_user = User(
         title=user.title,
@@ -58,13 +57,11 @@ def user_add(db: Session, user: UserCreate, change_user_id: int):
         create_time=func.now(),
         change_time=func.now()
     )
-    print("started after create user")
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
     user_id = new_user.id
-    print("started after create user")    
     # Set user preferences
     preferences = {
         'UserEmail': user.email,
@@ -73,7 +70,6 @@ def user_add(db: Session, user: UserCreate, change_user_id: int):
     
     for key, value in preferences.items():
         set_preferences(db, user_id, key, value)
-    print(preferences)  
     user_data = {
         'id': new_user.id,
         'title': new_user.title,
@@ -90,7 +86,6 @@ def user_add(db: Session, user: UserCreate, change_user_id: int):
     }
     # logger.info(f"User: '{user.login}' ID: '{new_user.id}' created successfully ({change_user_id})!")
     cache.set(f"user:{user.login}", user_data, expire=3600)  # Store user object in cache
-    print("started after  after set_preferences")
     return user_data
 
 def set_preferences(db: Session, user_id: int, key: str, value: str):
