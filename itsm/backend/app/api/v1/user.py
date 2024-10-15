@@ -10,8 +10,9 @@ router = APIRouter()
 @router.post("/users/")
 def create_user(user: UserCreate, db: Session = Depends(get_db), change_user_id: int = 1):
     try:
-        user_id = user_add(db, user, change_user_id)
-        return {"user_id": user_id}
+        new_user = user_add(db, user, change_user_id)  # Expecting User instance here
+        
+        return {"user": new_user} 
     except EmailAlreadyExistsError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except LoginAlreadyExistsError as e:

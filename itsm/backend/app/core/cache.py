@@ -3,7 +3,7 @@ from app.core.logging import get_logger
 import json
 import redis
 import diskcache
-
+logger = get_logger(__name__)
 class Cache:
     def __init__(self):
         if settings.CACHE_TYPE == "redis":

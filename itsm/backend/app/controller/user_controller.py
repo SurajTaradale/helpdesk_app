@@ -64,7 +64,7 @@ def user_add(db: Session, user: UserCreate, change_user_id: int):
     db.refresh(new_user)
 
     user_id = new_user.id
-        
+    print("started after create user")    
     # Set user preferences
     preferences = {
         'UserEmail': user.email,
@@ -73,10 +73,25 @@ def user_add(db: Session, user: UserCreate, change_user_id: int):
     
     for key, value in preferences.items():
         set_preferences(db, user_id, key, value)
-    
-    logger.info(f"User: '{user.login}' ID: '{new_user.id}' created successfully ({change_user_id})!")
-    cache.set(f"user:{user.login}", new_user, expire=3600)  # Store user object in cache
-    return new_user.id
+    print(preferences)  
+    user_data = {
+        'id': new_user.id,
+        'title': new_user.title,
+        'first_name': new_user.first_name,
+        'last_name': new_user.last_name,
+        'login': new_user.login,
+        'valid_id': new_user.valid_id,
+        'create_by': new_user.create_by,
+        'change_by': new_user.change_by,
+        'create_time': new_user.create_time.isoformat(),
+        'change_time': new_user.change_time.isoformat(),
+        'email': preferences.get('UserEmail'),
+        'mobile': preferences.get('UserMobile')
+    }
+    # logger.info(f"User: '{user.login}' ID: '{new_user.id}' created successfully ({change_user_id})!")
+    cache.set(f"user:{user.login}", user_data, expire=3600)  # Store user object in cache
+    print("started after  after set_preferences")
+    return user_data
 
 def set_preferences(db: Session, user_id: int, key: str, value: str):
     # Delete old data
@@ -106,9 +121,10 @@ def email_exists(db: Session, email: str) -> bool:
 def get_user_data(db: Session, identifier):
     cache_key = f"user:{identifier}"
     cached_user = cache.get(cache_key)
+    print(f"cached_user {cached_user}")
+
     if cached_user:
         return cached_user
-    print(f"cached_user {cached_user}")
 
     # Fetch user data from the database
     user_data = None
