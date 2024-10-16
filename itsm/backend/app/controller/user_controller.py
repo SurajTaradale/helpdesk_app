@@ -1,13 +1,14 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.user_preferences import UserPreference
-from app.schemas.user import UserCreate
+from app.schemas.user import UserSchema
 from app.utils import hash_password, generate_random_password
 from app.core.logging import get_logger
 from sqlalchemy import func
 from app.core.cache import Cache
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from math import ceil
+from typing import List, Optional
 logger = get_logger(__name__)
 cache = Cache()
 
@@ -20,7 +21,7 @@ class LoginAlreadyExistsError(Exception):
 class CommanErrorException(Exception):
     pass
 
-def user_add(db: Session, user: UserCreate, change_user_id: int):
+def user_add(db: Session, user: UserSchema, change_user_id: int):
     # Check required fields
     required_fields = ["first_name", "last_name", "login", "email", "valid_id"]
     for field in required_fields:
@@ -96,11 +97,17 @@ def is_valid_email(email: str) -> bool:
     return True  # Assuming email validation is correct
 
 def email_exists(db: Session, email: str) -> bool:
-    # Check if email is in the UserPreference table
-    preference_exists = db.query(UserPreference).filter(UserPreference.preferences_key == 'UserEmail', UserPreference.preferences_value == email.encode('utf-8')).first()
+    # Check if the email exists in the UserPreference table
+    preference_exists = db.query(UserPreference.preferences_value).filter(
+        UserPreference.preferences_key == 'UserEmail', 
+        UserPreference.preferences_value == email.encode('utf-8')
+    ).first()
+    
+    # If a matching email is found, return True
     if preference_exists:
         return True
-
+    
+    # If no matching email is found, return False
     return False
 
 def get_user_data(db: Session, identifier):
@@ -156,20 +163,31 @@ def set_preferences(db: Session, user_id: int, key: str, value: str):
     db.add(new_preference)
     db.commit()
 
-def get_preferences(db: Session, user_id: int, key: str) -> str:
-    # Create a select query to retrieve the preference based on user_id and key
-    stmt = select(UserPreference.preferences_value).where(
-        UserPreference.user_id == user_id,
-        UserPreference.preferences_key == key
-    )
-    
-    # Execute the query and fetch the first result
-    result = db.execute(stmt).scalar_one_or_none()
+def get_preferences(db: Session, user_id: int = None, key: str = None) -> List[str]:
+    # Create a select query to retrieve preferences based on user_id and/or key
+    if user_id and key:
+        stmt = select(UserPreference.preferences_value).where(
+            UserPreference.user_id == user_id,
+            UserPreference.preferences_key == key
+        )
+    elif user_id:
+        stmt = select(UserPreference.preferences_value).where(
+            UserPreference.user_id == user_id
+        )
+    elif key:
+        stmt = select(UserPreference.preferences_value).where(
+            UserPreference.preferences_key == key
+        )        
+    else:
+        return []  # Return an empty list if neither user_id nor key is provided
 
-    # If result is found, decode it (as it's stored as bytes); otherwise, return None
-    if result:
-        return result.decode('utf-8')  # Convert bytes to string
-    return None  # Return None if no preference is found
+    
+    # Execute the query and fetch all results
+    result = db.execute(stmt).scalars().all()  # Fetch all matching records
+
+    # Decode each result (as they're stored as bytes) and return as a list of strings
+    return [r.decode('utf-8') for r in result] if result else []
+
 
 def get_all_preferences(db: Session, user_id: int) -> dict:
     cache_key = f"preferences:{user_id}"
@@ -275,3 +293,161 @@ def get_user_list(db: Session, page_no: int = 1, count_per_page: int = 10):
     except Exception as e:
         logger.exception("Failed to retrieve user list.")
         raise CommanErrorException("Failed to retrieve user list.")
+
+def get_user_search(db: Session, 
+                    Search: Optional[str] = None, 
+                    UserLogin: Optional[str] = None) -> List[dict]:
+    """
+    Searches for users based on Search (for name or login), UserLogin (exact login), 
+    or PostMasterSearch (preference key search). At least one search parameter is required.
+
+    :param db: SQLAlchemy session to interact with the database.
+    :param Search: A string to search in first name, last name, or login.
+    :param UserLogin: A string to perform an exact login match.
+    :param PostMasterSearch: A preference key to search related to users.
+    :return: A list of user dictionaries or preferences.
+    :raises HTTPException: If no search parameters are provided or an error occurs.
+    """
+    try:
+        # Ensure at least one search parameter is provided
+        if not Search and not UserLogin:
+            logger.error("No search parameters provided")
+            raise CommanErrorException("At least one search parameter must be provided.")
+
+        # Initialize the query
+        query = db.query(User)
+
+        # Apply filters based on provided parameters
+        if Search:
+            search_term = f"%{Search}%"  # Wildcard search
+            query = query.filter(
+                or_(
+                    User.first_name.ilike(search_term),  # Case-insensitive search
+                    User.last_name.ilike(search_term),
+                    User.login.ilike(search_term)
+                )
+            )
+            logger.info(f"Searching users by name or login using: {Search}")
+
+        if UserLogin:
+            user_login_term = f"%{UserLogin}%"
+            query = query.filter(User.login.ilike(user_login_term))  # Case-insensitive for login
+            logger.info(f"Searching users by exact login using: {UserLogin}")
+
+        # Execute the query and fetch results
+        users = query.all()
+
+        # If no users are found, return an empty list
+        if not users:
+            logger.info("No users found for the given search parameters")
+            return []
+
+        # Prepare the user data in a list
+        user_list = []
+        for user in users:
+            user_data = {
+                'id': user.id,
+                'title': user.title,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'login': user.login,
+                'valid_id': user.valid_id,
+                'create_by': user.create_by,
+                'change_by': user.change_by,
+                'create_time': user.create_time.isoformat(),
+                'change_time': user.change_time.isoformat(),
+            }
+            user_list.append(user_data)
+
+        return user_list
+
+    except CommanErrorException as e:
+        logger.error(f"HTTP error: {e.detail}")
+        raise e  # Re-raise HTTPException for FastAPI to handle it correctly
+
+    except Exception as e:
+        logger.exception("Failed to perform user search.")
+        raise CommanErrorException("An unexpected error occurred.")
+
+def user_update(db: Session, user_id: int, user: UserSchema, change_user_id: int):
+    # Fetch existing user from the database
+    existing_user = db.query(User).filter(User.id == user_id).first()
+    print(user)
+    if not existing_user:
+        logger.error(f"User with ID '{user_id}' not found.")
+        raise CommanErrorException(f"User with ID '{user_id}' not found.")
+    print(user)
+    # Check required fields
+    required_fields = ["first_name", "last_name", "login", "email", "valid_id"]
+    for field in required_fields:
+        if not getattr(user, field, None):
+            logger.error(f"Need {field}!")
+            raise CommanErrorException(f"Need {field}!")
+
+    # Check if email address is valid
+    if not is_valid_email(user.email):
+        logger.error(f"Email address ({user.email}) not valid!")
+        raise CommanErrorException(f"Email address ({user.email}) not valid!")
+
+    exist_preferences = get_all_preferences(db, user_id)
+    print(user.email, exist_preferences.get('UserEmail'))
+    # Check if email is already used (only if the email has changed)
+    if user.email != exist_preferences.get('UserEmail') :
+        if email_exists(db, user.email):
+            logger.error(f"Email address ({user.email}) is already used by another user.")
+            raise EmailAlreadyExistsError(f"Email address ({user.email}) is already used.")
+    
+    # Check if user with this login already exists (only if the login has changed)
+    if user.login != existing_user.login and UserLoginExistsCheck(db, user.login):
+        logger.error(f"A user with the username '{user.login}' already exists.")
+        raise LoginAlreadyExistsError(f"A user with the username '{user.login}' already exists.")
+    print(user.login)
+    # Update the user data
+    existing_user.first_name = user.first_name
+    existing_user.last_name = user.last_name
+    existing_user.login = user.login
+    existing_user.valid_id = user.valid_id
+    existing_user.change_by = change_user_id
+    existing_user.change_time = func.now()
+
+    # Update password if provided
+    if user.password:
+        existing_user.pw = hash_password(user.password)
+
+    db.commit()
+    db.refresh(existing_user)
+
+    # Update preferences (if applicable)
+    preferences = {
+        'UserEmail': user.email,
+        'UserMobile': user.mobile
+    }
+
+    for key, value in preferences.items():
+        set_preferences(db, user_id, key, value)
+
+    # Prepare updated user data
+    user_data = {
+        'id': existing_user.id,
+        'title': existing_user.title,
+        'first_name': existing_user.first_name,
+        'last_name': existing_user.last_name,
+        'login': existing_user.login,
+        'valid_id': existing_user.valid_id,
+        'create_by': existing_user.create_by,
+        'change_by': existing_user.change_by,
+        'create_time': existing_user.create_time.isoformat(),
+        'change_time': existing_user.change_time.isoformat(),
+        'preferences': preferences
+    }
+    Delete_user_cache(existing_user.login, existing_user.id)
+    # Update the cache with the updated user data
+    cache.set(f"user:{existing_user.login}", user_data, expire=3600)  # Store updated user object in cache
+    cache.set(f"user:{existing_user.id}", user_data, expire=3600)  # Store updated user object in cache
+    return user_data
+
+def Delete_user_cache(login:str = None, user_id:int = None):
+    cache.delete(f"user:{login}")
+    cache.delete(f"user:{user_id}")
+    cache.delete(f"preferences:{user_id}")
+    cache.delete(f"preferences:{login}")
