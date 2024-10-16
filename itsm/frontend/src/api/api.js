@@ -13,13 +13,4 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-export const loginApi = async (username, password) => {
-  const response = await apiClient.post(
-    '/auth/token',
-    new URLSearchParams({ username, password })
-  );
-  Cookies.set('token', response.data.access_token);
-  return response.data;
-};
-
 export default apiClient;

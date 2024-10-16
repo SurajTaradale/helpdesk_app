@@ -1,7 +1,7 @@
 import apiClient from '../api/api';
 import Cookies from 'js-cookie';
 
-export const login = async (username, password) => {
+export const loginApi = async (username, password) => {
   try {
     const response = await apiClient.post(
       '/auth/token',
@@ -19,7 +19,7 @@ export const login = async (username, password) => {
     const { access_token } = response.data;
     Cookies.set('token', access_token, {
       expires: 1,
-      secure: true,
+      secure: false,
       sameSite: 'Strict',
     });
 
