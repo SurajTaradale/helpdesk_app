@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { login } from '../store/authSlice';
-import { loginApi } from '../api/api';
+import { loginApi } from '../services/AuthService';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const dispatch = useDispatch();
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       await loginApi(username, password);
       dispatch(login());
-      window.location.href = '/dashboard'; // Redirect to dashboard
+      navigate('/dashboard'); // Redirect to dashboard using navigate
     } catch (error) {
       console.error('Login failed:', error);
       alert('Login failed. Please check your credentials.');
