@@ -1,5 +1,6 @@
 from fastapi import FastAPI,Depends
 from app.api.v1.user import router as user_router
+from app.api.v1.customeruser import router as customeruser_router
 from app.api.v1.auth import router as auth_router 
 from app.api.v1.system import router as system_router 
 from app.middleware.auth_middleware import AuthMiddleware
@@ -30,6 +31,7 @@ def read_root():
     return {"message": "Welcome to the FastAPI User Management System"}
 
 # Include routers
-app.include_router(user_router, prefix="/api/v1", dependencies=[Depends(oauth2_scheme)])  # Protected routes
+app.include_router(user_router, prefix="/api/v1/agent", dependencies=[Depends(oauth2_scheme)])  # Protected routes
+app.include_router(customeruser_router, prefix="/api/v1/agent", dependencies=[Depends(oauth2_scheme)])  # Protected routes
 app.include_router(system_router, prefix="/api/v1", dependencies=[Depends(oauth2_scheme)])  # Protected routes
 app.include_router(auth_router, prefix="/auth")    # Public + protected auth routes
