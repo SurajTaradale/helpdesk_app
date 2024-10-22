@@ -6,7 +6,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from app.db.session import get_db
 from app.controller.user_controller import get_user_data
-PUBLIC_ROUTES = ["/", "/auth/token", "/public-resource", "/docs", "/openapi.json"]
+from app.controller.customeruser_controller import get_customeruser_data
+
+# Public routes
+PUBLIC_ROUTES = ["/", "/auth/customer/login", "/auth/token", "/public-resource", "/docs", "/openapi.json"]
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -15,7 +18,6 @@ logger = logging.getLogger(__name__)
 # JWT Secret and Configuration
 SECRET_KEY = "your_secret_key_here"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -35,22 +37,28 @@ class AuthMiddleware(BaseHTTPMiddleware):
         token = authorization.split(" ")[1]  # "Bearer <token>"
 
         try:
+            # Decode JWT token
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             username = payload.get("sub")
-            if username is None:
-                logger.error("Token does not contain a valid username")
+            usertype = payload.get("usertype")  # Either 'agent' or 'customeruser'
+
+            if not username or not usertype:
+                logger.error("Token does not contain a valid username or usertype")
                 return JSONResponse(status_code=401, content={"detail": "Invalid token"})
 
-            # Check if the user exists in the database
-            try:
-                db: Session = next(get_db())
+            # Check if user exists in the database based on usertype
+            db: Session = next(get_db())
+            if usertype == "agent":
                 user = get_user_data(db, username)
-                if not user:
-                    logger.error(f"User {username} not found in database")
-                    return JSONResponse(status_code=401, content={"detail": "User not found"})
-            except Exception as db_error:
-                logger.error(f"Database error: {db_error}")
-                return JSONResponse(status_code=500, content={"detail": "Internal server error during database lookup"})
+            elif usertype == "customeruser":
+                user = get_customeruser_data(db, username)
+            else:
+                logger.error(f"Unknown usertype: {usertype}")
+                return JSONResponse(status_code=401, content={"detail": "Invalid usertype in token"})
+
+            if not user:
+                logger.error(f"User {username} not found in database")
+                return JSONResponse(status_code=401, content={"detail": "User not found"})
 
             # Attach the authenticated user to the request state
             request.state.user = user
@@ -63,5 +71,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.error(f"Unhandled error: {e}")
             return JSONResponse(status_code=500, content={"detail": "Internal server error during authentication"})
 
+        # Proceed with the request
         response = await call_next(request)
         return response
