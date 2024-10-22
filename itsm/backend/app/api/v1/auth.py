@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from app.utils import hash_password
 from app.db.session import get_db
 from app.controller.user_controller import get_user_data, get_user_hash_pwd
-
+from app.controller.customeruser_controller import get_customeruser_data, get_customeruser_hash_pwd
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ router = APIRouter()
 class Token(BaseModel):
     access_token: str
     token_type: str
+    user_type :str
 
 class TokenData(BaseModel):
     username: str or None = None
@@ -138,8 +139,8 @@ async def login_for_access_token(db: Session = Depends(get_db), form_data: OAuth
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(data={"sub": user['login']}, expires_delta=access_token_expires)
-    return {"access_token": access_token, "token_type": "bearer"}
+    access_token = create_access_token(data={"sub": user['login'],"user_type":"agent"}, expires_delta=access_token_expires)
+    return {"access_token": access_token, "token_type": "bearer","user_type":"agent"}
     
 
 # Protected route: User details (example route)
@@ -150,3 +151,39 @@ async def read_users_me(current_user: UserInDB = Depends(get_current_active_user
     except Exception as e:
         logger.error(f"Failed to fetch current user: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch user details")
+
+# Dependency: Get user from DB by login
+def get_customeruser(db: Session, login: str):
+    try:
+        return get_customeruser_data(db, login)
+    except Exception as e:
+        logger.error(f"Error fetching user data: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error fetching user data")
+    
+def authenticate_customeruser(db: Session, login: str, password: str):
+    try:
+        user = get_customeruser(db, login)
+        hashed_password = get_customeruser_hash_pwd(db, login)
+        password = hash_password(password)
+        if not user or not verify_password(password, hashed_password):
+            return None
+        return user
+    except Exception as e:
+        logger.error(f"Authentication failed: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed")
+
+# Route: Token generation for login
+@router.post("/customer/login", response_model=Token)
+async def login_for_access_token(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_customeruser(db, form_data.username, form_data.password)
+    print(user)
+    if not user:
+        print(user)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(data={"sub": user['login'],"user_type":"customer"}, expires_delta=access_token_expires)
+    return {"access_token": access_token, "token_type": "bearer", "user_type":"customer"}
