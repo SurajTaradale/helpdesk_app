@@ -2,7 +2,7 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 
 const apiClient = axios.create({
-  baseURL: 'http://192.168.1.8:8001', // Update with your base URL
+  baseURL: 'http://192.168.1.8:8002', // Update with your base URL
 });
 
 apiClient.interceptors.request.use((config) => {

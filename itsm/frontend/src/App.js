@@ -2,22 +2,53 @@ import React from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom'; // Import Navigate here
 import PrivateRoute from './auth/PrivateRoute';
 import PublicRoute from './auth/PublicRoute';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-
+import AgentLogin from './pages/AgentLogin';
+import CustomerLogin from './pages/CustomerLogin';
+import AgentDashboard from './pages/AgentDashboard';
+import AgentLayout from './layout/AgentLayout';
+import CustomerDashboard from './pages/CustomerDashboard';
+import CustomerLayout from './layout/CustomerLayout';
 const App = () => {
   return (
     <div className="App">
       <Routes>
-        {/* Use PublicRoute for Login */}
-        <Route path="/login" element={<PublicRoute component={Login} />} />
-        {/* Use PrivateRoute for Dashboard */}
         <Route
-          path="/dashboard"
-          element={<PrivateRoute component={Dashboard} />}
+          path="/agent/login"
+          element={<PublicRoute component={AgentLogin} usertype="agent" />}
         />
-        {/* Add other routes here, e.g. for public access */}
-        <Route path="/" element={<Navigate to="/dashboard" />} />{' '}
+        <Route
+          path="/agent/dashboard"
+          element={
+            <PrivateRoute
+              component={() => (
+                <AgentLayout>
+                  <AgentDashboard />
+                </AgentLayout>
+              )}
+              usertype="agent"
+            />
+          }
+        />
+        <Route
+          path="/customer/login"
+          element={
+            <PublicRoute component={CustomerLogin} usertype="customer" />
+          }
+        />
+        <Route
+          path="/customer/dashboard"
+          element={
+            <PrivateRoute
+              component={() => (
+                <CustomerLayout>
+                  <CustomerDashboard />
+                </CustomerLayout>
+              )}
+              usertype="customer"
+            />
+          }
+        />
+        <Route path="/" element={<Navigate to="/agent/dashboard" />} />{' '}
         {/* Redirect root to dashboard */}
       </Routes>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { login } from '../store/authSlice';
-import { loginApi } from '../services/AuthService';
+import { login } from '../store/agentSlice';
+import { agentLoginApi } from '../services/AuthService';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const Login = () => {
@@ -13,9 +13,10 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await loginApi(username, password);
-      dispatch(login());
-      navigate('/dashboard'); // Redirect to dashboard using navigate
+      const response = await agentLoginApi(username, password);
+      const { user_type } = response;
+      dispatch(login({ user_type }));
+      navigate('/agent/dashboard'); // Redirect to dashboard using navigate
     } catch (error) {
       console.error('Login failed:', error);
       alert('Login failed. Please check your credentials.');
@@ -24,6 +25,7 @@ const Login = () => {
 
   return (
     <form onSubmit={handleLogin}>
+      <h1>Agent Login</h1>
       <input
         type="text"
         placeholder="Username"
