@@ -17,8 +17,8 @@ Introducing our advanced HelpDesk application, designed to streamline customer s
 
 - **Backend**: FastAPI
 - **Frontend**: ReactJS
-- **Database**: [Your Database]
-- **Authentication**: [Your Authentication Method]
+- **Database**: Postgresql
+- **Authentication**: JWT
 - **Deployment**: Docker
 
 ## Benefits
@@ -50,3 +50,11 @@ To get started with the HelpDesk app, follow the installation instructions below
     uvicorn app.main:app --host 0.0.0.0 --port 8001
    ```
 3. Set Up the Frontend:
+  - **Navigate to the frontend directory and install dependencies.
+  ```bash
+   cd frontend
+  ```
+   - **Run the Reactjs server.
+   ```bash
+   npm start
+   ```
