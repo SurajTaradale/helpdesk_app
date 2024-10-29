@@ -40,7 +40,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             # Decode JWT token
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             username = payload.get("sub")
-            usertype = payload.get("usertype")  # Either 'agent' or 'customeruser'
+            usertype = payload.get("usertype") or "agent"  # Either 'agent' or 'customeruser'
 
             if not username or not usertype:
                 logger.error("Token does not contain a valid username or usertype")

@@ -1,9 +1,9 @@
-import apiClient from '../api/api';
+import agentapiClient from '../api/agentapiClient';
 import Cookies from 'js-cookie';
 
 export const agentLoginApi = async (username, password) => {
   try {
-    const response = await apiClient.post(
+    const response = await agentapiClient.post(
       '/auth/token',
       new URLSearchParams({
         username,
@@ -33,7 +33,7 @@ export const agentLoginApi = async (username, password) => {
 
 export const customerLoginApi = async (username, password) => {
   try {
-    const response = await apiClient.post(
+    const response = await agentapiClient.post(
       '/auth/customer/login',
       new URLSearchParams({
         username,
