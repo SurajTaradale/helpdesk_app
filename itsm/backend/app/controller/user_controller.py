@@ -280,7 +280,7 @@ def get_user_list(db: Session, page_no: int = 1, count_per_page: int = 10):
                 'change_by': user.change_by,
                 'create_time': user.create_time.isoformat(),
                 'change_time': user.change_time.isoformat(),
-                'get_all_preferences': get_all_preferences(db,user.id)
+                'preferences': get_all_preferences(db,user.id)
             }
             user_list.append(user_data)
 

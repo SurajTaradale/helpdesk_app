@@ -19,12 +19,14 @@ logger = logging.getLogger(__name__)
 SECRET_KEY = "your_secret_key_here"
 ALGORITHM = "HS256"
 
+# In AuthMiddleware, allow preflight (OPTIONS) requests to bypass authentication
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Skip middleware for public routes
-        if request.url.path in PUBLIC_ROUTES:
+        # Allow OPTIONS requests for CORS preflight checks to pass through
+        if request.method == "OPTIONS" or request.url.path in PUBLIC_ROUTES:
             return await call_next(request)
 
+        # Authentication checks start here
         authorization: str = request.headers.get("Authorization")
         if not authorization:
             logger.error("Authorization header missing")
@@ -34,19 +36,17 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.error("Invalid Authorization header format")
             return JSONResponse(status_code=401, content={"detail": "Invalid Authorization header format"})
 
-        token = authorization.split(" ")[1]  # "Bearer <token>"
+        token = authorization.split(" ")[1]
 
         try:
-            # Decode JWT token
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             username = payload.get("sub")
-            usertype = payload.get("usertype") or "agent"  # Either 'agent' or 'customeruser'
+            usertype = payload.get("usertype") or "agent"
 
             if not username or not usertype:
                 logger.error("Token does not contain a valid username or usertype")
                 return JSONResponse(status_code=401, content={"detail": "Invalid token"})
 
-            # Check if user exists in the database based on usertype
             db: Session = next(get_db())
             if usertype == "agent":
                 user = get_user_data(db, username)
@@ -60,17 +60,15 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 logger.error(f"User {username} not found in database")
                 return JSONResponse(status_code=401, content={"detail": "User not found"})
 
-            # Attach the authenticated user to the request state
             request.state.user = user
 
         except JWTError as jwt_error:
             logger.error(f"JWT Error: {jwt_error}")
             return JSONResponse(status_code=401, content={"detail": "Invalid token or token expired"})
-
         except Exception as e:
             logger.error(f"Unhandled error: {e}")
             return JSONResponse(status_code=500, content={"detail": "Internal server error during authentication"})
 
-        # Proceed with the request
         response = await call_next(request)
         return response
+
