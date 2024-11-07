@@ -7,7 +7,7 @@ from app.controller.user_controller import EmailAlreadyExistsError, LoginAlready
 from typing import List, Optional
 router = APIRouter()
 
-@router.post("/users/")
+@router.post("/users")
 def create_user(user: UserSchema, db: Session = Depends(get_db), change_user_id: int = 1):
     try:
         new_user = user_add(db, user, change_user_id)  # Expecting User instance here
@@ -20,7 +20,7 @@ def create_user(user: UserSchema, db: Session = Depends(get_db), change_user_id:
     except Exception as e:
         raise HTTPException(status_code=500, detail="An unexpected error occurred"+str(e))
 
-@router.get("/user/")
+@router.get("/user")
 async def get_user(id: int = None, login: str = None, db: Session = Depends(get_db)):
     if id is None and login is None:
         raise HTTPException(status_code=400, detail="Either 'id' or 'login' must be provided")
@@ -40,7 +40,7 @@ async def get_user(id: int = None, login: str = None, db: Session = Depends(get_
     except Exception as e:
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
     
-@router.get("/userslist/")
+@router.get("/userslist")
 async def get_users_paginated(page_no: int = 1, count_per_page: int = 10, db: Session = Depends(get_db)):
     """
     Get a paginated list of users.

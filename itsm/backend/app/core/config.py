@@ -1,7 +1,8 @@
+import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    CACHE_TYPE: str = "redis"  # or "diskcache"
+    CACHE_TYPE: str = "diskcache"  # or "diskcache"
     REDIS_URL: str = "redis://localhost:6379/0"
     DISKCACHE_DIR: str = "/opt/helpdesk_app/itsm/cache"
 
