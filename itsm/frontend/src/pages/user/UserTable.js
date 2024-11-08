@@ -39,7 +39,7 @@ const UserTable = () => {
     };
 
     fetchUsers();
-  }, [pagination]);
+  }, [pagination, dispatch, navigate]);
 
   const theme = createTheme({
     palette: {

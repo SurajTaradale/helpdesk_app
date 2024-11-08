@@ -15,23 +15,27 @@ import {
   Paper,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-
+import { useNotification } from '../context/NotificationContext';
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
+  const showNotification = useNotification();
   const handleLogin = async (e) => {
     e.preventDefault();
+    if(!username || !password){
+      showNotification('UserName and Password is required', 'info');
+      return;
+    }
     try {
       const response = await agentLoginApi(username, password);
       const { user_type } = response;
+      showNotification('Login successfully', 'success');
       dispatch(login({ user_type }));
       navigate('/agent/dashboard');
     } catch (error) {
-      console.error('Login failed:', error);
-      alert('Login failed. Please check your credentials.');
+      showNotification('Login failed. Please check your credentials.', 'warning');
     }
   };
 
@@ -100,15 +104,7 @@ const Login = () => {
                   Forgot password?
                 </Typography>
               </Grid>
-              <Grid item>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  align="center"
-                >
-                  {"Don't have an account? Sign Up"}
-                </Typography>
-              </Grid>
+
             </Grid>
           </Box>
         </Box>
