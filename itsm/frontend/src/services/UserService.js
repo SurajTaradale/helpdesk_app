@@ -1,6 +1,7 @@
 import agentapiClient from '../api/agentapiClient';
+import { logout } from '../store/agentSlice';
 
-export const userlist = async (page_no, count_per_page) => {
+export const userlist = async (page_no, count_per_page, dispatch, navigate) => {
   try {
     const response = await agentapiClient.get('/api/v1/agent/userslist', {
       params: {
@@ -14,8 +15,23 @@ export const userlist = async (page_no, count_per_page) => {
 
     return response;
   } catch (error) {
-    throw new Error(
-      'Login failed: ' + (error.response?.data?.message || error.message)
-    );
+    console.log(error);
+    const statusCode = error?.status;
+    const errorMessage = error?.message || error.message;
+
+    // Handle 401 Unauthorized error
+    if (statusCode === 401) {
+      // Dispatch the logout action
+      dispatch(logout());
+      // Navigate to the login page
+      navigate('/agent/login');
+    }
+
+    // Return an object with status code and message
+    return {
+      success: false,
+      statusCode,
+      errorMessage,
+    };
   }
 };

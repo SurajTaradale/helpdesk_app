@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # JWT Secret and Configuration
 SECRET_KEY = "your_secret_key_here"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 3000
+ACCESS_TOKEN_EXPIRE_MINUTES = 3
 
 # OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")

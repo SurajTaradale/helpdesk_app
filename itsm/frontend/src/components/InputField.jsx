@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TextField, FormHelperText } from '@mui/material';
+import { TextField } from '@mui/material';
 
 const InputField = ({ name, label, validationType, value, onChange }) => {
   const [error, setError] = useState('');
