@@ -1,5 +1,4 @@
 import PropTypes from 'prop-types';
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMediaQuery } from '@mui/material';
 import {
@@ -54,6 +53,7 @@ function ReactTable({
   });
 
   const handleRowClick = (rowData) => {
+    console.log(rowData)
     navigate(`${rowData.path}`, { state: { rowData } });
   };
 

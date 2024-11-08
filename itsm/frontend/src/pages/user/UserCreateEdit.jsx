@@ -1,15 +1,12 @@
 import { useLocation } from 'react-router-dom';
 import React from 'react';
-import axios from 'axios';
-import { useEffect, useState } from 'react';
+import {  useState } from 'react';
 import InputField from '../../components/InputField';
 import { Button, Container } from '@mui/material';
-import GroupIcon from '@mui/icons-material/Group';
-import SaveIcon from '@mui/icons-material/Save';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 
 const UserCreateEdit = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const location = useLocation();
   const rowData = location.state?.rowData?.FullData;
   const [formData, setFormData] = useState({
@@ -23,7 +20,6 @@ const UserCreateEdit = () => {
     email: '',
     phone: '',
   });
-
   // Handle input changes and pass the new value to the parent form
   const handleInputChange = (name, value) => {
     setFormData((prevData) => ({

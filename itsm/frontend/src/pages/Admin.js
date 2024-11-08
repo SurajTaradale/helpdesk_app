@@ -1,6 +1,5 @@
 import React from 'react';
 import { Grid, Card, CardContent, Typography } from '@mui/material';
-import HomeIcon from '@mui/icons-material/Home';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useNavigate } from 'react-router-dom';
 

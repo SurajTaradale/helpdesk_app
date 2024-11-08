@@ -1,39 +1,33 @@
 import { useEffect, useState } from 'react';
 import {
   Card,
-  FormControl,
   Grid2,
-  TextField,
-  Autocomplete,
   TableRow,
   TableCell,
   Skeleton,
   Typography,
-  InputLabel,
-  Select,
-  MenuItem,
-  ThemeProvider,
   createTheme,
-  useTheme,
 } from '@mui/material';
-import DoneSharpIcon from '@mui/icons-material/DoneSharp';
-import CloseSharpIcon from '@mui/icons-material/CloseSharp';
-import { Link } from 'react-router-dom';
 import ReactTable from '../../components/ReactTable';
 import { userlist } from '../../services/UserService';
-
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 const UserTable = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [paginationInfo, setPaginationInfo] = useState({ total: 0 });
   const [usersData, setUsersData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   useEffect(() => {
     setTableLoading(true);
     const fetchUsers = async () => {
       try {
         const response = await userlist(
           pagination.pageIndex + 1,
-          pagination.pageSize
+          pagination.pageSize,
+          dispatch,
+          navigate
         );
         setUsersData(response.data.users);
         setPaginationInfo({ total: response.data.total_users });
