@@ -41,6 +41,10 @@ const UserCreateEdit = () => {
       // Form is valid, proceed with submission
       console.log(formData);
     } else {
+      setErrors({
+        email: '',
+        phone: '',
+      })
       // Form has errors, don't submit
       console.log('Form has errors, not submitting');
     }
